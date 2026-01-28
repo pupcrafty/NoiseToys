@@ -40,8 +40,11 @@ class FeatureConfig:
     # Extra-slow EMA for analyzer bands (viewer channels)
     band_ema_smooth: float = 0.06
     # Very slow baseline EMA for each analyzer band (context-aware "normal")
-    # slow_alpha in ~0.005–0.01 → roughly 10–20 seconds adaptation depending on hop.
-    band_baseline_slow_alpha: float = 0.005
+    # Use asymmetric rise/fall so spikes don't immediately lift the baseline.
+    # rise_alpha in ~0.001–0.003 → slower upward adaptation (20–60s depending on hop).
+    # fall_alpha in ~0.008–0.02 → faster downward adaptation to recover baseline.
+    band_baseline_rise_alpha: float = 0.002
+    band_baseline_fall_alpha: float = 0.01
 
 
 class FeatureExtractor:
@@ -143,19 +146,21 @@ class FeatureExtractor:
             # Slower EMA specifically for analyzer viewer: band_ema_* channels
             self._detailed_ema[name] = lerp(self._detailed_ema[name], v, self.config.band_ema_smooth)
             # Very slow baseline that tracks the "context" of each band
-            # baseline[b] = slow_alpha * smoothed[b] + (1 - slow_alpha) * baseline[b]
-            self._detailed_baseline[name] = lerp(
-                self._detailed_baseline[name],
-                self._detailed_ema[name],
-                self.config.band_baseline_slow_alpha,
+            # Use asymmetric alpha so the baseline rises cautiously but falls faster.
+            baseline = self._detailed_baseline[name]
+            smoothed = self._detailed_ema[name]
+            baseline_alpha = (
+                self.config.band_baseline_rise_alpha
+                if smoothed > baseline
+                else self.config.band_baseline_fall_alpha
             )
+            self._detailed_baseline[name] = lerp(baseline, smoothed, baseline_alpha)
             
             # Presence detection with hysteresis (on_threshold=1.6, off_threshold=1.3)
             # Goal: Turn "energy" into "this thing exists right now"
             on_threshold = 1.6
             off_threshold = 1.3
             baseline = self._detailed_baseline[name]
-            smoothed = self._detailed_ema[name]
             
             if baseline > 1e-6:  # Avoid division by zero
                 if not self._detailed_presence[name] and smoothed > baseline * on_threshold:
