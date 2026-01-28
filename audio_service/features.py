@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
-from typing import Dict
+from typing import Deque, Dict
 
 import numpy as np
 
@@ -39,9 +40,8 @@ class FeatureConfig:
     movement_smooth: float = 0.10
     # Extra-slow EMA for analyzer bands (viewer channels)
     band_ema_smooth: float = 0.06
-    # Very slow baseline EMA for each analyzer band (context-aware "normal")
-    # slow_alpha in ~0.005–0.01 → roughly 10–20 seconds adaptation depending on hop.
-    band_baseline_slow_alpha: float = 0.005
+    # Baseline smoothing window (in beats) for analyzer bands.
+    band_baseline_beats: int = 30
 
 
 class FeatureExtractor:
@@ -86,6 +86,10 @@ class FeatureExtractor:
         self._detailed_ema = {name: 0.0 for name, _, _ in self._detailed_bands}
         # Even slower baseline that tracks "current normal" per band
         self._detailed_baseline = {name: 0.0 for name, _, _ in self._detailed_bands}
+        self._baseline_history: Dict[str, Deque[float]] = {
+            name: deque(maxlen=self.config.band_baseline_beats)
+            for name, _, _ in self._detailed_bands
+        }
         # Presence state per band (hysteresis-based "this thing exists right now")
         self._detailed_presence = {name: False for name, _, _ in self._detailed_bands}
 
@@ -142,26 +146,6 @@ class FeatureExtractor:
             self._detailed_s[name] = lerp(self._detailed_s[name], v, self.config.smooth)
             # Slower EMA specifically for analyzer viewer: band_ema_* channels
             self._detailed_ema[name] = lerp(self._detailed_ema[name], v, self.config.band_ema_smooth)
-            # Very slow baseline that tracks the "context" of each band
-            # baseline[b] = slow_alpha * smoothed[b] + (1 - slow_alpha) * baseline[b]
-            self._detailed_baseline[name] = lerp(
-                self._detailed_baseline[name],
-                self._detailed_ema[name],
-                self.config.band_baseline_slow_alpha,
-            )
-            
-            # Presence detection with hysteresis (on_threshold=1.6, off_threshold=1.3)
-            # Goal: Turn "energy" into "this thing exists right now"
-            on_threshold = 1.6
-            off_threshold = 1.3
-            baseline = self._detailed_baseline[name]
-            smoothed = self._detailed_ema[name]
-            
-            if baseline > 1e-6:  # Avoid division by zero
-                if not self._detailed_presence[name] and smoothed > baseline * on_threshold:
-                    self._detailed_presence[name] = True
-                elif self._detailed_presence[name] and smoothed < baseline * off_threshold:
-                    self._detailed_presence[name] = False
 
         self._b_s = lerp(self._b_s, b, self.config.smooth)
         self._m_s = lerp(self._m_s, m, self.config.smooth)
@@ -185,6 +169,27 @@ class FeatureExtractor:
         if self._pulse_cd <= 0.0 and treble_flux >= self.config.pulse_flux_thresh:
             pulse = True
             self._pulse_cd = self.config.pulse_refractory
+
+        if beat:
+            for name, _, _ in self._detailed_bands:
+                history = self._baseline_history[name]
+                history.append(self._detailed_ema[name])
+                if history:
+                    self._detailed_baseline[name] = float(np.mean(history))
+
+        # Presence detection with hysteresis (on_threshold=1.6, off_threshold=1.3)
+        # Goal: Turn "energy" into "this thing exists right now"
+        for name, _, _ in self._detailed_bands:
+            on_threshold = 1.6
+            off_threshold = 1.3
+            baseline = self._detailed_baseline[name]
+            smoothed = self._detailed_ema[name]
+
+            if baseline > 1e-6:  # Avoid division by zero
+                if not self._detailed_presence[name] and smoothed > baseline * on_threshold:
+                    self._detailed_presence[name] = True
+                elif self._detailed_presence[name] and smoothed < baseline * off_threshold:
+                    self._detailed_presence[name] = False
 
         energy = self._b_s + self._m_s + self._t_s
         prev_energy = self._energy_s
