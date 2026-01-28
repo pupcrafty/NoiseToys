@@ -1,0 +1,44 @@
+# General
+.DS_Store
+Thumbs.db
+
+# Python bytecode / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python packaging / build artifacts
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs / temp
+*.log
+*.tmp
+*.bak
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS-specific
+Desktop.ini
+
+# Node / frontend (if later added)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+

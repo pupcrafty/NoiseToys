@@ -1,0 +1,11 @@
+{
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "date_format": "%Y-%m-%d %H:%M:%S"
+  },
+  "osc": {
+    "host": "127.0.0.1",
+    "port": 9000
+  }
+}

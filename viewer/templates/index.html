@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>theListener2 Viewer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>theListener2 Audio Viewer</h1>
+            <div class="status">
+                <span id="connection-status" class="status-indicator disconnected">Disconnected</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="visualizations">
+                <div class="viz-panel">
+                    <h2>Audio Analyzer Bands</h2>
+                    <div class="audio-visualizer analyzer-bars">
+                        <!-- Low end -->
+                        <div class="band-container">
+                            <div class="presence-indicator" id="presence-sub-1"></div>
+                            <div class="band-label">Sub‑1<br><span class="band-range">20–40</span></div>
+                            <div class="band-bar">
+                                <div id="band-sub-1" class="band-fill" style="height: 0%"></div>
+                                <span class="band-value" id="band-sub-1-value">0.00</span>
+                            </div>
+                        </div>
+                        <div class="band-container">
+                            <div class="presence-indicator" id="presence-sub-2"></div>
+                            <div class="band-label">Sub‑2<br><span class="band-range">40–70</span></div>
+                            <div class="band-bar">
+                                <div id="band-sub-2" class="band-fill" style="height: 0%"></div>
+                                <span class="band-value" id="band-sub-2-value">0.00</span>
+                            </div>
+                        </div>
+                        <div class="band-container">
+                            <div class="presence-indicator" id="presence-bass-1"></div>
+                            <div class="band-label">Bass‑1<br><span class="band-range">70–120</span></div>
+                            <div class="band-bar">
+                                <div id="band-bass-1" class="band-fill" style="height: 0%"></div>
+                                <span class="band-value" id="band-bass-1-value">0.00</span>
+                            </div>
+                        </div>
+                        <div class="band-container">
+                            <div class="presence-indicator" id="presence-bass-2"></div>
+                            <div class="band-label">Bass‑2<br><span class="band-range">120–200</span></div>
+                            <div class="band-bar">
+                                <div id="band-bass-2" class="band-fill" style="height: 0%"></div>
+                                <span class="band-value" id="band-bass-2-value">0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Mids -->
+                        <div class="band-container">
+                            <div class="presence-indicator" id="presence-low-mid-1"></div>
+                            <div class="band-label">Low‑mid‑1<br><span class="band-range">200–350</span></div>
+                            <div class="band-bar">
+                                <div id="band-low-mid-1" class="band-fill" style="height: 0%"></div>
+                                <span class="band-value" id="band-low-mid-1-value">0.00</span>
+                            </div>
+                        </div>
+                        <div class="band-container">
+                            <div class="presence-indicator" id="presence-low-mid-2"></div>
+                            <div class="band-label">Low‑mid‑2<br><span class="band-range">350–600</span></div>
+                            <div class="band-bar">
+                                <div id="band-low-mid-2" class="band-fill" style="height: 0%"></div>
+                                <span class="band-value" id="band-low-mid-2-value">0.00</span>
+                            </div>
+                        </div>
+                        <div class="band-container">
+                            <div class="presence-indicator" id="presence-mid-1"></div>
+                            <div class="band-label">Mid‑1<br><span class="band-range">600–1.2k</span></div>
+                            <div class="band-bar">
+                                <div id="band-mid-1" class="band-fill" style="height: 0%"></div>
+                                <span class="band-value" id="band-mid-1-value">0.00</span>
+                            </div>
+                        </div>
+                        <div class="band-container">
+                            <div class="presence-indicator" id="presence-mid-2"></div>
+                            <div class="band-label">Mid‑2<br><span class="band-range">1.2k–2.4k</span></div>
+                            <div class="band-bar">
+                                <div id="band-mid-2" class="band-fill" style="height: 0%"></div>
+                                <span class="band-value" id="band-mid-2-value">0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Highs -->
+                        <div class="band-container">
+                            <div class="presence-indicator" id="presence-high-1"></div>
+                            <div class="band-label">High‑1<br><span class="band-range">2.4k–4k</span></div>
+                            <div class="band-bar">
+                                <div id="band-high-1" class="band-fill" style="height: 0%"></div>
+                                <span class="band-value" id="band-high-1-value">0.00</span>
+                            </div>
+                        </div>
+                        <div class="band-container">
+                            <div class="presence-indicator" id="presence-high-2"></div>
+                            <div class="band-label">High‑2<br><span class="band-range">4k–6.5k</span></div>
+                            <div class="band-bar">
+                                <div id="band-high-2" class="band-fill" style="height: 0%"></div>
+                                <span class="band-value" id="band-high-2-value">0.00</span>
+                            </div>
+                        </div>
+                        <div class="band-container">
+                            <div class="presence-indicator" id="presence-air-1"></div>
+                            <div class="band-label">Air‑1<br><span class="band-range">6.5k–10k</span></div>
+                            <div class="band-bar">
+                                <div id="band-air-1" class="band-fill" style="height: 0%"></div>
+                                <span class="band-value" id="band-air-1-value">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="viz-panel">
+                    <h2>Beat Detection (Aubio)</h2>
+                    <div class="beat-visualizer">
+                        <div class="beat-circle-container">
+                            <div id="beat-circle" class="beat-circle"></div>
+                            <div class="beat-info">
+                                <div class="beat-stat">
+                                    <span class="stat-label">BPM:</span>
+                                    <span id="bpm-value" class="stat-value">120.0</span>
+                                </div>
+                                <div class="beat-stat">
+                                    <span class="stat-label">Confidence:</span>
+                                    <span id="conf-value" class="stat-value">0.00</span>
+                                </div>
+                                <div class="beat-stat">
+                                    <span class="stat-label">Beat ID:</span>
+                                    <span id="beat-id-value" class="stat-value">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

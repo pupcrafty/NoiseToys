@@ -1,0 +1,26 @@
+# Python dependencies for theListener (Windows compatible)
+numpy>=1.20.0
+sounddevice>=0.4.6
+aubio>=0.4.9
+python-osc>=1.7.4
+
+# ============================================================================
+# WINDOWS INSTALLATION NOTES (especially for Python 3.14+):
+# ============================================================================
+# 
+# aubio does NOT have pre-built wheels for Python 3.14 on Windows yet.
+# 
+# OPTION 1 (Recommended): Install Visual C++ Build Tools
+#   1. Download: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+#   2. Install "Desktop development with C++" workload
+#   3. Then run: python -m pip install -r requirements.txt
+#
+# OPTION 2: Use Python 3.11 or 3.12 (has pre-built wheels)
+#   - Install Python 3.11 or 3.12 from python.org
+#   - Then run: python -m pip install -r requirements.txt
+#
+# OPTION 3: Install other packages first, skip aubio for now
+#   python -m pip install numpy sounddevice python-osc
+#   # Then manually install aubio later when wheels are available
+#
+# ============================================================================
