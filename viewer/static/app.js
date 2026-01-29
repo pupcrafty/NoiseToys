@@ -26,6 +26,14 @@ analyzerBands.forEach((band) => {
     baselineEl.className = 'band-baseline';
     band.bar.appendChild(baselineEl);
 
+    // Also create a numeric readout of the baseline under the bar
+    // Insert it right after the band-bar element
+    const baselineValueEl = document.createElement('span');
+    baselineValueEl.className = 'band-baseline-value';
+    baselineValueEl.textContent = '—';
+    band.bar.insertAdjacentElement('afterend', baselineValueEl);
+    band.baselineValueEl = baselineValueEl;
+
     // Store baseline DOM element and corresponding key on the band object
     band.baselineEl = baselineEl;
     band.baselineKey = band.key.replace('band_ema_', 'band_baseline_');
@@ -53,25 +61,41 @@ socket.on('disconnect', () => {
 socket.on('audio_data', (data) => {
     // Update analyzer bars for each detailed band
     analyzerBands.forEach((band) => {
-        const { key, bar, valueEl, baselineEl, baselineKey, presenceEl, presenceKey } = band;
+        const { key, bar, valueEl, baselineEl, baselineKey, baselineValueEl, presenceEl, presenceKey } = band;
         if (!bar || !valueEl) return;
 
         const raw = typeof data[key] === 'number' ? data[key] : 0.0;
-        const pct = Math.min((raw / MAX_BAND_VALUE) * 100, 100);
-        bar.style.height = `${pct}%`;
         valueEl.textContent = raw.toFixed(2);
 
         // Update rolling baseline line (context-aware "normal" level)
         if (baselineEl && baselineKey) {
             const baseRaw = typeof data[baselineKey] === 'number' ? data[baselineKey] : null;
-            if (baseRaw !== null) {
-                const basePct = Math.min((baseRaw / MAX_BAND_VALUE) * 100, 100);
-                baselineEl.style.bottom = `${basePct}%`;
+            if (baseRaw !== null && baseRaw > 1e-6) {
+                // Baseline always at 50% height
+                baselineEl.style.bottom = '50%';
                 baselineEl.style.opacity = '1';
+
+                // Scale bar height relative to baseline: baseline = 50%, so current = (raw/baseRaw) * 50%
+                // Cap at 100% (when current is 2x baseline or more)
+                const scaledPct = Math.min((raw / baseRaw) * 50, 100);
+                bar.style.height = `${scaledPct}%`;
+
+                if (baselineValueEl) {
+                    baselineValueEl.textContent = baseRaw.toFixed(2);
+                }
             } else {
-                // Hide if we don't have a value yet
+                // Fallback to original scaling if no baseline yet
+                const pct = Math.min((raw / MAX_BAND_VALUE) * 100, 100);
+                bar.style.height = `${pct}%`;
                 baselineEl.style.opacity = '0';
+                if (baselineValueEl) {
+                    baselineValueEl.textContent = '—';
+                }
             }
+        } else {
+            // Fallback if no baseline element
+            const pct = Math.min((raw / MAX_BAND_VALUE) * 100, 100);
+            bar.style.height = `${pct}%`;
         }
 
         // Update presence indicator (hysteresis-based "this thing exists right now")

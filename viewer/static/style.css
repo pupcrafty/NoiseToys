@@ -196,6 +196,18 @@ h1 {
     z-index: 1;
 }
 
+.band-baseline-value {
+    font-size: 0.65em;
+    color: #ff4444;
+    opacity: 0.9;
+    text-align: center;
+    display: block;
+    width: 100%;
+    line-height: 1.2;
+    margin-top: 25px;
+    min-height: 1em;
+}
+
 .beat-visualizer {
     display: flex;
     justify-content: center;
