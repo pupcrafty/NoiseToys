@@ -42,6 +42,8 @@ class FeatureConfig:
     # Very slow baseline EMA for each analyzer band (context-aware "normal")
     # slow_alpha in ~0.005–0.01 → roughly 10–20 seconds adaptation depending on hop.
     band_baseline_slow_alpha: float = 0.005
+    # Threshold for counting a "normalized energy pulse" (for per-band 4‑beat stats)
+    normalized_pulse_threshold: float = 1.2
 
 
 class FeatureExtractor:
@@ -88,6 +90,16 @@ class FeatureExtractor:
         self._detailed_baseline = {name: 0.0 for name, _, _ in self._detailed_bands}
         # Presence state per band (hysteresis-based "this thing exists right now")
         self._detailed_presence = {name: False for name, _, _ in self._detailed_bands}
+
+    @property
+    def detailed_band_names(self) -> list[str]:
+        """
+        Public accessor for the ordered list of detailed band names.
+
+        This lets other parts of the system (e.g. beat statistics in main.py)
+        reason about bands in a stable index order without duplicating config.
+        """
+        return [name for name, _, _ in self._detailed_bands]
 
     def process(self, samples: np.ndarray) -> Dict[str, float | bool]:
         if samples.size == 0:
@@ -229,6 +241,15 @@ class FeatureExtractor:
             # Context-aware baseline (rolling "normal" for this band)
             baseline_key = f"band_baseline_{name}"
             base_payload[baseline_key] = self._detailed_baseline[name]
+            # Scale-normalized energy value (EMA / baseline, scaled around baseline)
+            baseline = self._detailed_baseline[name]
+            ema = self._detailed_ema[name]
+            if baseline > 1e-6:
+                normalized_key = f"band_normalized_{name}"
+                base_payload[normalized_key] = ema / baseline
+            else:
+                normalized_key = f"band_normalized_{name}"
+                base_payload[normalized_key] = 1.0  # Default to 1.0 when baseline is too small
             # Presence indicator (hysteresis-based "this thing exists right now")
             presence_key = f"band_presence_{name}"
             base_payload[presence_key] = self._detailed_presence[name]

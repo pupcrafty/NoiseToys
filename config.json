@@ -7,5 +7,22 @@
   "osc": {
     "host": "127.0.0.1",
     "port": 9000
+  },
+  "audio": {
+    "samplerate": 44100,
+    "hop_size": 512,
+    "win_size": 1024,
+    "channels": 1,
+    "device": null
+  },
+  "audio_playback": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 9002,
+    "device": null,
+    "volume": 1.0
+  },
+  "features": {
+    "normalized_pulse_threshold": 1.05
   }
 }

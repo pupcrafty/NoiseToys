@@ -84,6 +84,18 @@ class OscOut:
             "band_presence_high_1",
             "band_presence_high_2",
             "band_presence_air_1",
+            # Scale-normalized energy values for detailed bands (EMA / baseline)
+            "band_normalized_sub_1",
+            "band_normalized_sub_2",
+            "band_normalized_bass_1",
+            "band_normalized_bass_2",
+            "band_normalized_low_mid_1",
+            "band_normalized_low_mid_2",
+            "band_normalized_mid_1",
+            "band_normalized_mid_2",
+            "band_normalized_high_1",
+            "band_normalized_high_2",
+            "band_normalized_air_1",
         ]
         for key in keys_to_break_out:
             if key not in payload:
@@ -92,3 +104,43 @@ class OscOut:
             if isinstance(value, bool):
                 value = 1 if value else 0
             self.client.send_message(f"/audio/{key}", value)
+
+    def send_band_winner_stats(
+        self,
+        raw_window_winners: Dict[int, int],
+        norm_window_winners: Dict[int, int],
+    ) -> None:
+        """
+        Broadcast running tallies of which detailed band most often "wins"
+        in recent beat windows.
+
+        Each value is an integer index into the detailed band list used by
+        the feature extractor. The viewer / consumer can map indices back
+        to band labels.
+
+        Two categories:
+        - raw_window_winners: based on overall band energy (EMA)
+        - norm_window_winners: based on normalized band energy (EMA / baseline)
+
+        Each has 3 buckets / windows: last 30, 60, and 90 beats.
+        """
+        for window, band_index in raw_window_winners.items():
+            self.client.send_message(f"/audio/beat_raw_band_win_{window}", int(band_index))
+
+        for window, band_index in norm_window_winners.items():
+            self.client.send_message(f"/audio/beat_norm_band_win_{window}", int(band_index))
+
+    def send_band_pulse_frequency(self, window_size: int, per_band_counts: Dict[str, int]) -> None:
+        """
+        Broadcast, per band, how many times its normalized energy exceeded
+        the configured threshold in the last N beats.
+
+        Each value is an integer in [0, N] where N is the window size.
+
+        OSC endpoints:
+          /audio/band_pulse<window>_<band_name>
+        where <window> is 4, 8, 16, or 32, and <band_name> matches the detailed
+        band name (e.g. sub_1, bass_2).
+        """
+        for band_name, count in per_band_counts.items():
+            self.client.send_message(f"/audio/band_pulse{window_size}_{band_name}", int(count))

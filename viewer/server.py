@@ -12,6 +12,8 @@ from flask_socketio import SocketIO, emit
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import ThreadingOSCUDPServer
 
+from audio_playback import AudioPlayback
+
 app = Flask(__name__, template_folder="templates", static_folder="static")
 socketio = SocketIO(app, cors_allowed_origins="*")
 
@@ -71,10 +73,78 @@ audio_data = {
     "band_presence_high_1": False,
     "band_presence_high_2": False,
     "band_presence_air_1": False,
+    # Scale-normalized band values (EMA / baseline)
+    "band_normalized_sub_1": 1.0,
+    "band_normalized_sub_2": 1.0,
+    "band_normalized_bass_1": 1.0,
+    "band_normalized_bass_2": 1.0,
+    "band_normalized_low_mid_1": 1.0,
+    "band_normalized_low_mid_2": 1.0,
+    "band_normalized_mid_1": 1.0,
+    "band_normalized_mid_2": 1.0,
+    "band_normalized_high_1": 1.0,
+    "band_normalized_high_2": 1.0,
+    "band_normalized_air_1": 1.0,
     "total_energy": 0.0,
     "beat": False,
     "pulse": False,
     "movement": 0.0,
+    # Beat-wise band winner stats (indices into detailed band list)
+    "beat_raw_band_win_30": 0,
+    "beat_raw_band_win_60": 0,
+    "beat_raw_band_win_90": 0,
+    "beat_norm_band_win_30": 0,
+    "beat_norm_band_win_60": 0,
+    "beat_norm_band_win_90": 0,
+    # Total pulse frequency (sum across all bands) for different windows
+    "total_pulse_freq_8": 0,
+    "total_pulse_freq_16": 0,
+    "total_pulse_freq_32": 0,
+    # Per-band pulse frequencies over last 4, 8, 16, 32 beats
+    "band_pulse4_sub_1": 0,
+    "band_pulse4_sub_2": 0,
+    "band_pulse4_bass_1": 0,
+    "band_pulse4_bass_2": 0,
+    "band_pulse4_low_mid_1": 0,
+    "band_pulse4_low_mid_2": 0,
+    "band_pulse4_mid_1": 0,
+    "band_pulse4_mid_2": 0,
+    "band_pulse4_high_1": 0,
+    "band_pulse4_high_2": 0,
+    "band_pulse4_air_1": 0,
+    "band_pulse8_sub_1": 0,
+    "band_pulse8_sub_2": 0,
+    "band_pulse8_bass_1": 0,
+    "band_pulse8_bass_2": 0,
+    "band_pulse8_low_mid_1": 0,
+    "band_pulse8_low_mid_2": 0,
+    "band_pulse8_mid_1": 0,
+    "band_pulse8_mid_2": 0,
+    "band_pulse8_high_1": 0,
+    "band_pulse8_high_2": 0,
+    "band_pulse8_air_1": 0,
+    "band_pulse16_sub_1": 0,
+    "band_pulse16_sub_2": 0,
+    "band_pulse16_bass_1": 0,
+    "band_pulse16_bass_2": 0,
+    "band_pulse16_low_mid_1": 0,
+    "band_pulse16_low_mid_2": 0,
+    "band_pulse16_mid_1": 0,
+    "band_pulse16_mid_2": 0,
+    "band_pulse16_high_1": 0,
+    "band_pulse16_high_2": 0,
+    "band_pulse16_air_1": 0,
+    "band_pulse32_sub_1": 0,
+    "band_pulse32_sub_2": 0,
+    "band_pulse32_bass_1": 0,
+    "band_pulse32_bass_2": 0,
+    "band_pulse32_low_mid_1": 0,
+    "band_pulse32_low_mid_2": 0,
+    "band_pulse32_mid_1": 0,
+    "band_pulse32_mid_2": 0,
+    "band_pulse32_high_1": 0,
+    "band_pulse32_high_2": 0,
+    "band_pulse32_air_1": 0,
 }
 
 beat_data = {
@@ -87,6 +157,12 @@ beat_data = {
 
 # Latest values per OSC endpoint
 latest_messages: Dict[str, Dict[str, Any]] = {}
+
+# Audio playback instance
+audio_playback: AudioPlayback | None = None
+
+# Browser audio streaming enabled flag (enabled by default)
+browser_audio_enabled = True
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -168,6 +244,176 @@ def osc_handler(address: str, *args):
     
     elif address == "/audio/total_energy":
         audio_data["total_energy"] = float(value)
+        socketio.emit("audio_data", audio_data)
+
+    # Beat-wise band winner stats (raw energy)
+    elif address == "/audio/beat_raw_band_win_30":
+        audio_data["beat_raw_band_win_30"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/beat_raw_band_win_60":
+        audio_data["beat_raw_band_win_60"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/beat_raw_band_win_90":
+        audio_data["beat_raw_band_win_90"] = int(value)
+        socketio.emit("audio_data", audio_data)
+
+    # Beat-wise band winner stats (normalized energy)
+    elif address == "/audio/beat_norm_band_win_30":
+        audio_data["beat_norm_band_win_30"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/beat_norm_band_win_60":
+        audio_data["beat_norm_band_win_60"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/beat_norm_band_win_90":
+        audio_data["beat_norm_band_win_90"] = int(value)
+        socketio.emit("audio_data", audio_data)
+
+    # Per-band pulse frequencies over last 4 beats
+    elif address == "/audio/band_pulse4_sub_1":
+        audio_data["band_pulse4_sub_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse4_sub_2":
+        audio_data["band_pulse4_sub_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse4_bass_1":
+        audio_data["band_pulse4_bass_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse4_bass_2":
+        audio_data["band_pulse4_bass_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse4_low_mid_1":
+        audio_data["band_pulse4_low_mid_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse4_low_mid_2":
+        audio_data["band_pulse4_low_mid_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse4_mid_1":
+        audio_data["band_pulse4_mid_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse4_mid_2":
+        audio_data["band_pulse4_mid_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse4_high_1":
+        audio_data["band_pulse4_high_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse4_high_2":
+        audio_data["band_pulse4_high_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse4_air_1":
+        audio_data["band_pulse4_air_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    # Per-band pulse frequencies over last 8 beats
+    elif address == "/audio/band_pulse8_sub_1":
+        audio_data["band_pulse8_sub_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse8_sub_2":
+        audio_data["band_pulse8_sub_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse8_bass_1":
+        audio_data["band_pulse8_bass_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse8_bass_2":
+        audio_data["band_pulse8_bass_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse8_low_mid_1":
+        audio_data["band_pulse8_low_mid_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse8_low_mid_2":
+        audio_data["band_pulse8_low_mid_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse8_mid_1":
+        audio_data["band_pulse8_mid_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse8_mid_2":
+        audio_data["band_pulse8_mid_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse8_high_1":
+        audio_data["band_pulse8_high_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse8_high_2":
+        audio_data["band_pulse8_high_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse8_air_1":
+        audio_data["band_pulse8_air_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    # Per-band pulse frequencies over last 16 beats
+    elif address == "/audio/band_pulse16_sub_1":
+        audio_data["band_pulse16_sub_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse16_sub_2":
+        audio_data["band_pulse16_sub_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse16_bass_1":
+        audio_data["band_pulse16_bass_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse16_bass_2":
+        audio_data["band_pulse16_bass_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse16_low_mid_1":
+        audio_data["band_pulse16_low_mid_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse16_low_mid_2":
+        audio_data["band_pulse16_low_mid_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse16_mid_1":
+        audio_data["band_pulse16_mid_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse16_mid_2":
+        audio_data["band_pulse16_mid_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse16_high_1":
+        audio_data["band_pulse16_high_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse16_high_2":
+        audio_data["band_pulse16_high_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse16_air_1":
+        audio_data["band_pulse16_air_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    # Per-band pulse frequencies over last 32 beats
+    elif address == "/audio/band_pulse32_sub_1":
+        audio_data["band_pulse32_sub_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse32_sub_2":
+        audio_data["band_pulse32_sub_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse32_bass_1":
+        audio_data["band_pulse32_bass_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse32_bass_2":
+        audio_data["band_pulse32_bass_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse32_low_mid_1":
+        audio_data["band_pulse32_low_mid_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse32_low_mid_2":
+        audio_data["band_pulse32_low_mid_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse32_mid_1":
+        audio_data["band_pulse32_mid_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse32_mid_2":
+        audio_data["band_pulse32_mid_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse32_high_1":
+        audio_data["band_pulse32_high_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse32_high_2":
+        audio_data["band_pulse32_high_2"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/band_pulse32_air_1":
+        audio_data["band_pulse32_air_1"] = int(value)
+        socketio.emit("audio_data", audio_data)
+
+    # Total pulse frequency (sum across all bands) for different windows
+    elif address == "/audio/total_pulse_freq_8":
+        audio_data["total_pulse_freq_8"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/total_pulse_freq_16":
+        audio_data["total_pulse_freq_16"] = int(value)
+        socketio.emit("audio_data", audio_data)
+    elif address == "/audio/total_pulse_freq_32":
+        audio_data["total_pulse_freq_32"] = int(value)
         socketio.emit("audio_data", audio_data)
 
     # Detailed band endpoints
@@ -388,6 +634,22 @@ def osc_handler(address: str, *args):
             ]:
                 if key in payload:
                     audio_data[key] = bool(payload.get(key, False))
+            # Scale-normalized band values (EMA / baseline)
+            for key in [
+                "band_normalized_sub_1",
+                "band_normalized_sub_2",
+                "band_normalized_bass_1",
+                "band_normalized_bass_2",
+                "band_normalized_low_mid_1",
+                "band_normalized_low_mid_2",
+                "band_normalized_mid_1",
+                "band_normalized_mid_2",
+                "band_normalized_high_1",
+                "band_normalized_high_2",
+                "band_normalized_air_1",
+            ]:
+                if key in payload:
+                    audio_data[key] = float(payload.get(key, 1.0))
 
             socketio.emit("audio_data", audio_data)
         except Exception as e:
@@ -409,6 +671,25 @@ def start_osc_server(host: str = "127.0.0.1", port: int = 9001):
     dispatcher.map("/audio/pulse", osc_handler)
     dispatcher.map("/audio/movement", osc_handler)
     dispatcher.map("/audio/total_energy", osc_handler)
+    # Beat-wise band winner stats
+    dispatcher.map("/audio/beat_raw_band_win_30", osc_handler)
+    dispatcher.map("/audio/beat_raw_band_win_60", osc_handler)
+    dispatcher.map("/audio/beat_raw_band_win_90", osc_handler)
+    dispatcher.map("/audio/beat_norm_band_win_30", osc_handler)
+    dispatcher.map("/audio/beat_norm_band_win_60", osc_handler)
+    dispatcher.map("/audio/beat_norm_band_win_90", osc_handler)
+    # Per-band pulse frequencies over last 4 beats
+    dispatcher.map("/audio/band_pulse4_sub_1", osc_handler)
+    dispatcher.map("/audio/band_pulse4_sub_2", osc_handler)
+    dispatcher.map("/audio/band_pulse4_bass_1", osc_handler)
+    dispatcher.map("/audio/band_pulse4_bass_2", osc_handler)
+    dispatcher.map("/audio/band_pulse4_low_mid_1", osc_handler)
+    dispatcher.map("/audio/band_pulse4_low_mid_2", osc_handler)
+    dispatcher.map("/audio/band_pulse4_mid_1", osc_handler)
+    dispatcher.map("/audio/band_pulse4_mid_2", osc_handler)
+    dispatcher.map("/audio/band_pulse4_high_1", osc_handler)
+    dispatcher.map("/audio/band_pulse4_high_2", osc_handler)
+    dispatcher.map("/audio/band_pulse4_air_1", osc_handler)
     # Detailed band endpoints
     dispatcher.map("/audio/band_sub_1", osc_handler)
     dispatcher.map("/audio/band_sub_2", osc_handler)
@@ -457,6 +738,10 @@ def start_osc_server(host: str = "127.0.0.1", port: int = 9001):
     dispatcher.map("/audio/band_presence_high_1", osc_handler)
     dispatcher.map("/audio/band_presence_high_2", osc_handler)
     dispatcher.map("/audio/band_presence_air_1", osc_handler)
+    # Total pulse frequency endpoints
+    dispatcher.map("/audio/total_pulse_freq_8", osc_handler)
+    dispatcher.map("/audio/total_pulse_freq_16", osc_handler)
+    dispatcher.map("/audio/total_pulse_freq_32", osc_handler)
     dispatcher.map("/audio/standardized", osc_handler)
     dispatcher.set_default_handler(osc_handler)  # Catch all other messages
     
@@ -486,12 +771,74 @@ def handle_connect():
     emit("beat_data", beat_data)
     # Send latest values per endpoint so the viewer can initialize
     emit("message_log", list(latest_messages.values()))
+    # Send current playback state
+    emit("playback_state", {
+        "enabled": browser_audio_enabled,
+        "volume": audio_playback.volume if audio_playback else 1.0,
+    })
 
 
 @socketio.on("disconnect")
 def handle_disconnect():
     """Handle client disconnection."""
     logger.info("Client disconnected")
+
+
+@socketio.on("set_playback_enabled")
+def handle_set_playback_enabled(enabled: bool):
+    """Handle playback enable/disable request."""
+    global audio_playback, browser_audio_enabled
+    
+    # Enable/disable browser audio streaming
+    browser_audio_enabled = enabled
+    logger.info(f"Browser audio playback {'enabled' if enabled else 'disabled'} via UI")
+    
+    # Also control server-side playback if available
+    if audio_playback is not None:
+        if enabled:
+            # Start server-side playback stream if not already running
+            if not audio_playback.stream or not audio_playback.stream.active:
+                try:
+                    audio_playback._start_playback_stream()
+                    logger.info("Server-side audio playback enabled via UI")
+                except Exception as e:
+                    logger.error(f"Failed to start server-side audio playback: {e}")
+        else:
+            # Stop server-side playback stream but keep receiver running
+            if audio_playback.stream and audio_playback.stream.active:
+                try:
+                    audio_playback.stream.stop()
+                    audio_playback.stream.close()
+                    audio_playback.stream = None
+                    logger.info("Server-side audio playback disabled via UI")
+                except Exception as e:
+                    logger.error(f"Error stopping server-side playback: {e}")
+    
+    # Broadcast state update to all clients
+    socketio.emit("playback_state", {
+        "enabled": browser_audio_enabled,
+        "volume": audio_playback.volume if audio_playback else 1.0,
+    })
+
+
+@socketio.on("set_playback_volume")
+def handle_set_playback_volume(volume: float):
+    """Handle playback volume change request."""
+    global audio_playback
+    if audio_playback is None:
+        emit("error", {"message": "Audio playback not initialized"})
+        return
+    
+    # Clamp volume to [0, 1]
+    volume = max(0.0, min(1.0, float(volume)))
+    audio_playback.volume = volume
+    logger.info(f"Audio playback volume set to {volume:.2f}")
+    
+    # Broadcast state update to all clients
+    socketio.emit("playback_state", {
+        "enabled": audio_playback.running if audio_playback else False,
+        "volume": volume,
+    })
 
 
 def load_config() -> Dict[str, Any]:
@@ -514,7 +861,53 @@ if __name__ == "__main__":
     logger.info("Note: Make sure audio_service is configured to send OSC to this port")
     start_osc_server(osc_host, osc_port)
     
+    # Start audio playback receiver (always start to receive UDP, even if not playing on server)
+    # This allows browser playback to work
+    playback_cfg = config.get("audio_playback", {})
+    playback_enabled = playback_cfg.get("enabled", True)
+    audio_cfg = config.get("audio", {})
+    playback_host = playback_cfg.get("host", "127.0.0.1")
+    playback_port = int(playback_cfg.get("port", 9002))
+    playback_samplerate = int(audio_cfg.get("samplerate", 44100))
+    playback_channels = int(audio_cfg.get("channels", 1))
+    playback_device = playback_cfg.get("device", None)
+    playback_volume = float(playback_cfg.get("volume", 1.0))
+    
+    # Callback to forward audio to browser
+    def forward_to_browser(samples_list, samplerate):
+        """Forward audio samples to browser via SocketIO."""
+        if browser_audio_enabled:
+            socketio.emit("audio_samples", {
+                "samples": samples_list,
+                "samplerate": samplerate,
+            })
+    
+    # Always create and start the audio receiver to forward to browser
+    # Server-side playback is optional
+    audio_playback = AudioPlayback(
+        udp_host=playback_host,
+        udp_port=playback_port,
+        samplerate=playback_samplerate,
+        channels=playback_channels,
+        device=playback_device,
+        volume=playback_volume,
+        browser_callback=forward_to_browser,
+    )
+    try:
+        # Start the receiver (start_server_playback=False means only UDP receiver, no server playback)
+        audio_playback.start(start_server_playback=playback_enabled)
+        logger.info("Audio receiver started (browser playback ready)")
+    except Exception as e:
+        logger.error(f"Failed to start audio receiver: {e}")
+        audio_playback = None
+    
     # Start Flask server
     web_port = int(os.environ.get("VIEWER_PORT", 5000))
     logger.info(f"Starting web viewer server on http://127.0.0.1:{web_port}")
-    socketio.run(app, host="127.0.0.1", port=web_port, debug=False)
+    
+    try:
+        socketio.run(app, host="127.0.0.1", port=web_port, debug=False)
+    finally:
+        # Cleanup
+        if audio_playback:
+            audio_playback.stop()

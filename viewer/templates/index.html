@@ -11,8 +11,22 @@
     <div class="container">
         <header>
             <h1>theListener2 Audio Viewer</h1>
-            <div class="status">
-                <span id="connection-status" class="status-indicator disconnected">Disconnected</span>
+            <div class="header-controls">
+                <div class="status">
+                    <span id="connection-status" class="status-indicator disconnected">Disconnected</span>
+                </div>
+                <div class="audio-playback-controls">
+                    <label class="toggle-switch-label">
+                        <input type="checkbox" id="playback-toggle" checked>
+                        <span class="toggle-switch"></span>
+                        <span class="toggle-label">Audio Playback</span>
+                    </label>
+                    <div class="volume-control">
+                        <label for="volume-slider" class="volume-label">Volume</label>
+                        <input type="range" id="volume-slider" min="0" max="100" value="100" step="1">
+                        <span id="volume-value" class="volume-value">100%</span>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -20,10 +34,25 @@
             <div class="visualizations">
                 <div class="viz-panel">
                     <h2>Audio Analyzer Bands</h2>
+                    <div class="threshold-controls">
+                        <span class="threshold-label">Normalized threshold</span>
+                        <input
+                            id="normalized-threshold-slider"
+                            type="range"
+                            min="0"
+                            max="2"
+                            step="0.05"
+                            value="1.15"
+                        />
+                        <span id="normalized-threshold-value" class="threshold-value">1.15</span>
+                    </div>
                     <div class="audio-visualizer analyzer-bars">
                         <!-- Low end -->
                         <div class="band-container">
-                            <div class="presence-indicator" id="presence-sub-1"></div>
+                            <div class="indicator-row">
+                                <div class="presence-indicator" id="presence-sub-1"></div>
+                                <div class="normalized-pulse" id="normalized-sub-1"></div>
+                            </div>
                             <div class="band-label">Sub‑1<br><span class="band-range">20–40</span></div>
                             <div class="band-bar">
                                 <div id="band-sub-1" class="band-fill" style="height: 0%"></div>
@@ -31,7 +60,10 @@
                             </div>
                         </div>
                         <div class="band-container">
-                            <div class="presence-indicator" id="presence-sub-2"></div>
+                            <div class="indicator-row">
+                                <div class="presence-indicator" id="presence-sub-2"></div>
+                                <div class="normalized-pulse" id="normalized-sub-2"></div>
+                            </div>
                             <div class="band-label">Sub‑2<br><span class="band-range">40–70</span></div>
                             <div class="band-bar">
                                 <div id="band-sub-2" class="band-fill" style="height: 0%"></div>
@@ -39,7 +71,10 @@
                             </div>
                         </div>
                         <div class="band-container">
-                            <div class="presence-indicator" id="presence-bass-1"></div>
+                            <div class="indicator-row">
+                                <div class="presence-indicator" id="presence-bass-1"></div>
+                                <div class="normalized-pulse" id="normalized-bass-1"></div>
+                            </div>
                             <div class="band-label">Bass‑1<br><span class="band-range">70–120</span></div>
                             <div class="band-bar">
                                 <div id="band-bass-1" class="band-fill" style="height: 0%"></div>
@@ -47,7 +82,10 @@
                             </div>
                         </div>
                         <div class="band-container">
-                            <div class="presence-indicator" id="presence-bass-2"></div>
+                            <div class="indicator-row">
+                                <div class="presence-indicator" id="presence-bass-2"></div>
+                                <div class="normalized-pulse" id="normalized-bass-2"></div>
+                            </div>
                             <div class="band-label">Bass‑2<br><span class="band-range">120–200</span></div>
                             <div class="band-bar">
                                 <div id="band-bass-2" class="band-fill" style="height: 0%"></div>
@@ -57,7 +95,10 @@
 
                         <!-- Mids -->
                         <div class="band-container">
-                            <div class="presence-indicator" id="presence-low-mid-1"></div>
+                            <div class="indicator-row">
+                                <div class="presence-indicator" id="presence-low-mid-1"></div>
+                                <div class="normalized-pulse" id="normalized-low-mid-1"></div>
+                            </div>
                             <div class="band-label">Low‑mid‑1<br><span class="band-range">200–350</span></div>
                             <div class="band-bar">
                                 <div id="band-low-mid-1" class="band-fill" style="height: 0%"></div>
@@ -65,7 +106,10 @@
                             </div>
                         </div>
                         <div class="band-container">
-                            <div class="presence-indicator" id="presence-low-mid-2"></div>
+                            <div class="indicator-row">
+                                <div class="presence-indicator" id="presence-low-mid-2"></div>
+                                <div class="normalized-pulse" id="normalized-low-mid-2"></div>
+                            </div>
                             <div class="band-label">Low‑mid‑2<br><span class="band-range">350–600</span></div>
                             <div class="band-bar">
                                 <div id="band-low-mid-2" class="band-fill" style="height: 0%"></div>
@@ -73,7 +117,10 @@
                             </div>
                         </div>
                         <div class="band-container">
-                            <div class="presence-indicator" id="presence-mid-1"></div>
+                            <div class="indicator-row">
+                                <div class="presence-indicator" id="presence-mid-1"></div>
+                                <div class="normalized-pulse" id="normalized-mid-1"></div>
+                            </div>
                             <div class="band-label">Mid‑1<br><span class="band-range">600–1.2k</span></div>
                             <div class="band-bar">
                                 <div id="band-mid-1" class="band-fill" style="height: 0%"></div>
@@ -81,7 +128,10 @@
                             </div>
                         </div>
                         <div class="band-container">
-                            <div class="presence-indicator" id="presence-mid-2"></div>
+                            <div class="indicator-row">
+                                <div class="presence-indicator" id="presence-mid-2"></div>
+                                <div class="normalized-pulse" id="normalized-mid-2"></div>
+                            </div>
                             <div class="band-label">Mid‑2<br><span class="band-range">1.2k–2.4k</span></div>
                             <div class="band-bar">
                                 <div id="band-mid-2" class="band-fill" style="height: 0%"></div>
@@ -91,7 +141,10 @@
 
                         <!-- Highs -->
                         <div class="band-container">
-                            <div class="presence-indicator" id="presence-high-1"></div>
+                            <div class="indicator-row">
+                                <div class="presence-indicator" id="presence-high-1"></div>
+                                <div class="normalized-pulse" id="normalized-high-1"></div>
+                            </div>
                             <div class="band-label">High‑1<br><span class="band-range">2.4k–4k</span></div>
                             <div class="band-bar">
                                 <div id="band-high-1" class="band-fill" style="height: 0%"></div>
@@ -99,7 +152,10 @@
                             </div>
                         </div>
                         <div class="band-container">
-                            <div class="presence-indicator" id="presence-high-2"></div>
+                            <div class="indicator-row">
+                                <div class="presence-indicator" id="presence-high-2"></div>
+                                <div class="normalized-pulse" id="normalized-high-2"></div>
+                            </div>
                             <div class="band-label">High‑2<br><span class="band-range">4k–6.5k</span></div>
                             <div class="band-bar">
                                 <div id="band-high-2" class="band-fill" style="height: 0%"></div>
@@ -107,7 +163,10 @@
                             </div>
                         </div>
                         <div class="band-container">
-                            <div class="presence-indicator" id="presence-air-1"></div>
+                            <div class="indicator-row">
+                                <div class="presence-indicator" id="presence-air-1"></div>
+                                <div class="normalized-pulse" id="normalized-air-1"></div>
+                            </div>
                             <div class="band-label">Air‑1<br><span class="band-range">6.5k–10k</span></div>
                             <div class="band-bar">
                                 <div id="band-air-1" class="band-fill" style="height: 0%"></div>
@@ -135,6 +194,87 @@
                                     <span class="stat-label">Beat ID:</span>
                                     <span id="beat-id-value" class="stat-value">0</span>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="viz-panel">
+                    <h2>Band Winners (Last 30/60/90 Beats)</h2>
+                    <div class="winner-stats">
+                        <div class="winner-values">
+                            <div>Raw winners (30/60/90): <span id="raw-winners-text">– / – / –</span></div>
+                            <div>Norm winners (30/60/90): <span id="norm-winners-text">– / – / –</span></div>
+                            <div>Overall max normalized energy: <span id="overall-norm-text">0.00</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="viz-panel">
+                    <h2>Normalized Pulse Frequency (Per Band)</h2>
+                    <div class="pulse-freq-grid">
+                        <div class="pulse-freq-section">
+                            <h3>4 Beats</h3>
+                            <div class="pulse4-list">
+                                <div>Sub‑1: <span id="pulse4-sub-1">0</span></div>
+                                <div>Sub‑2: <span id="pulse4-sub-2">0</span></div>
+                                <div>Bass‑1: <span id="pulse4-bass-1">0</span></div>
+                                <div>Bass‑2: <span id="pulse4-bass-2">0</span></div>
+                                <div>Low‑mid‑1: <span id="pulse4-low-mid-1">0</span></div>
+                                <div>Low‑mid‑2: <span id="pulse4-low-mid-2">0</span></div>
+                                <div>Mid‑1: <span id="pulse4-mid-1">0</span></div>
+                                <div>Mid‑2: <span id="pulse4-mid-2">0</span></div>
+                                <div>High‑1: <span id="pulse4-high-1">0</span></div>
+                                <div>High‑2: <span id="pulse4-high-2">0</span></div>
+                                <div>Air‑1: <span id="pulse4-air-1">0</span></div>
+                            </div>
+                        </div>
+                        <div class="pulse-freq-section">
+                            <h3>8 Beats</h3>
+                            <div class="pulse8-list">
+                                <div>Sub‑1: <span id="pulse8-sub-1">0</span></div>
+                                <div>Sub‑2: <span id="pulse8-sub-2">0</span></div>
+                                <div>Bass‑1: <span id="pulse8-bass-1">0</span></div>
+                                <div>Bass‑2: <span id="pulse8-bass-2">0</span></div>
+                                <div>Low‑mid‑1: <span id="pulse8-low-mid-1">0</span></div>
+                                <div>Low‑mid‑2: <span id="pulse8-low-mid-2">0</span></div>
+                                <div>Mid‑1: <span id="pulse8-mid-1">0</span></div>
+                                <div>Mid‑2: <span id="pulse8-mid-2">0</span></div>
+                                <div>High‑1: <span id="pulse8-high-1">0</span></div>
+                                <div>High‑2: <span id="pulse8-high-2">0</span></div>
+                                <div>Air‑1: <span id="pulse8-air-1">0</span></div>
+                            </div>
+                        </div>
+                        <div class="pulse-freq-section">
+                            <h3>16 Beats</h3>
+                            <div class="pulse16-list">
+                                <div>Sub‑1: <span id="pulse16-sub-1">0</span></div>
+                                <div>Sub‑2: <span id="pulse16-sub-2">0</span></div>
+                                <div>Bass‑1: <span id="pulse16-bass-1">0</span></div>
+                                <div>Bass‑2: <span id="pulse16-bass-2">0</span></div>
+                                <div>Low‑mid‑1: <span id="pulse16-low-mid-1">0</span></div>
+                                <div>Low‑mid‑2: <span id="pulse16-low-mid-2">0</span></div>
+                                <div>Mid‑1: <span id="pulse16-mid-1">0</span></div>
+                                <div>Mid‑2: <span id="pulse16-mid-2">0</span></div>
+                                <div>High‑1: <span id="pulse16-high-1">0</span></div>
+                                <div>High‑2: <span id="pulse16-high-2">0</span></div>
+                                <div>Air‑1: <span id="pulse16-air-1">0</span></div>
+                            </div>
+                        </div>
+                        <div class="pulse-freq-section">
+                            <h3>32 Beats</h3>
+                            <div class="pulse32-list">
+                                <div>Sub‑1: <span id="pulse32-sub-1">0</span></div>
+                                <div>Sub‑2: <span id="pulse32-sub-2">0</span></div>
+                                <div>Bass‑1: <span id="pulse32-bass-1">0</span></div>
+                                <div>Bass‑2: <span id="pulse32-bass-2">0</span></div>
+                                <div>Low‑mid‑1: <span id="pulse32-low-mid-1">0</span></div>
+                                <div>Low‑mid‑2: <span id="pulse32-low-mid-2">0</span></div>
+                                <div>Mid‑1: <span id="pulse32-mid-1">0</span></div>
+                                <div>Mid‑2: <span id="pulse32-mid-2">0</span></div>
+                                <div>High‑1: <span id="pulse32-high-1">0</span></div>
+                                <div>High‑2: <span id="pulse32-high-2">0</span></div>
+                                <div>Air‑1: <span id="pulse32-air-1">0</span></div>
                             </div>
                         </div>
                     </div>
